@@ -14,6 +14,8 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
 	<ItemGroup>
+	  <None Remove="Assets\big.png" />
+	  <None Remove="Assets\medium.png" />
 	  <None Remove="Assets\small.png" />
 	</ItemGroup>
 
@@ -466,6 +468,7 @@
 
 	<ItemGroup>
 		<Compile Include="Backpack.cs" />
+		<Compile Include="BackpackEquippable.cs" />
 		<Compile Include="CartPatch.cs" />
 		<Compile Include="Core.cs" />
 		<Compile Include="PlayerPatch.cs" />
@@ -476,6 +479,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <EmbeddedResource Include="Assets\big.png" />
+	  <EmbeddedResource Include="Assets\medium.png" />
 	  <EmbeddedResource Include="Assets\small.png" />
 	</ItemGroup>
 	

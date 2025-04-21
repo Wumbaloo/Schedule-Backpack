@@ -58,6 +58,10 @@ public static class BackpackTypes
             }
             Icon = icon;
 
+            /*BackpackEquippable backpackEquippable = new();
+            var go = new GameObject($"BackpackEquippable ({name})");
+            var equippable = go.AddComponent<BackpackEquippable>();
+
             ItemDefinition = new StorableItemDefinition
             {
                 ID = name,
@@ -67,20 +71,24 @@ public static class BackpackTypes
                 Category = EItemCategory.Tools,
                 Icon = icon,
                 StackLimit = 1,
+                Equippable = equippable,
             };
+
 
             ItemInstance = new ItemInstance(ItemDefinition, 1)
             {
                 ID = name,
             };
 
+            backpackEquippable.itemInstance = ItemInstance;
+
             ShopListing = new BackpackListing(this);
 
             Registry.Instance.AddToRegistry(ItemDefinition);
-            CreateStorageEntity();
+            CreateStorageEntity();*/
         }
 
-        private void CreateStorageEntity()
+        public void CreateStorageEntity()
         {
             var templates = UnityEngine.Object.FindObjectsOfType<StorageEntity>();
             if (templates == null || templates.Length == 0)
@@ -88,7 +96,21 @@ public static class BackpackTypes
                 MelonLogger.Error("No StorageEntity template found in scene!");
                 return;
             }
-            StorageEntity = UnityEngine.Object.Instantiate(templates[0]);
+            var matchTemplate = templates.FirstOrDefault(x => x.name == Name);
+            foreach (var template in templates)
+            {
+               Melon<Core>.Logger.Error($"Loop : {template.name} (we're looking for {Name}).");
+            }
+            if (matchTemplate == null)
+            {
+                Melon<Core>.Logger.Error($"No matching template found for {Name}. Using first template.");
+                StorageEntity = UnityEngine.Object.Instantiate(templates[0]);
+            }
+            else
+            {
+                Melon<Core>.Logger.Error($"Found matching template for {Name}.");
+                StorageEntity = matchTemplate;
+            }
             StorageEntity.name = Name;
             StorageEntity.StorageEntityName = Name;
             StorageEntity.SlotCount = Rows * Columns;
@@ -101,8 +123,43 @@ public static class BackpackTypes
             StorageEntity.ItemSlots = slots;
         }
     }
+    public static void InitBackpacks()
+    {
+        foreach (var backpack in Backpacks)
+        {
+            var go = new GameObject($"BackpackEquippable ({backpack.Name})");
+            var equippable = go.AddComponent<BackpackEquippable>();
+
+            backpack.ItemDefinition = new StorableItemDefinition
+            {
+                ID = backpack.Name,
+                Name = backpack.Name,
+                Description = backpack.Description,
+                BasePurchasePrice = backpack.Price,
+                Category = EItemCategory.Tools,
+                Icon = backpack.Icon,
+                StackLimit = 1,
+                Equippable = equippable,
+            };
+
+
+            backpack.ItemInstance = new ItemInstance(backpack.ItemDefinition, 1)
+            {
+                ID = backpack.Name,
+            };
+
+            equippable.itemInstance = backpack.ItemInstance;
+
+            backpack.ShopListing = new BackpackListing(backpack);
+
+            Registry.Instance.AddToRegistry(backpack.ItemDefinition);
+            backpack.CreateStorageEntity();
+        }
+    }
 
     public static List<Backpack> Backpacks { get; set; } = new List<Backpack>([
-            new Backpack("Small Backpack", "A small backpack for minimal items.", 3, 1, 300, "small.png")
+            new Backpack("Small Backpack", "A small backpack for minimal items.", 3, 1, 300, "small.png"),
+            new Backpack("Medium Backpack", "A very standard backpack for various items.", 6, 1, 700, "medium.png"),
+            new Backpack("Large Backpack", "A large backpack for big guns and items.", 4, 2, 1500, "big.png"),
         ]);
 }

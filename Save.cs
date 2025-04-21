@@ -32,10 +32,9 @@ public class Save
             {
                 ItemInstance = Backpack.Instance.CurrentBackpack.ItemInstance,
             };
-            Melon<Core>.Logger.Msg($"Loaded backpack: {backpack.Name}");
-            
+
             var firstEmptyIndex = Player.Local.Inventory.Select((x, i) => new { x, i })
-                .FirstOrDefault(x => x.x == null)?.i ?? -1;
+                .FirstOrDefault(x => x.x == null || x.x.ItemInstance == null)?.i ?? -1;
             if (firstEmptyIndex != -1)
             {
                 Player.Local.Inventory[firstEmptyIndex] = slot;

@@ -3,7 +3,7 @@ using MelonLoader;
 
 namespace BackpackMod;
 
-internal class ShopManager
+public class ShopManager
 {
     readonly ShopInterface _shop;
 

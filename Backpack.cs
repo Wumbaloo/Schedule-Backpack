@@ -16,8 +16,8 @@ public class Backpack(IntPtr ptr) : MonoBehaviour(ptr)
     public Save Save { get; } = new Save();
 
     public BackpackTypes.Backpack CurrentBackpack;
+    public ShopManager shopManager;
 
-    private ShopManager _shopManager { get; } = new ShopManager();
     private StorageMenu _storageMenu = new StorageMenu();
 
     private bool _isOpened = false;
@@ -26,23 +26,46 @@ public class Backpack(IntPtr ptr) : MonoBehaviour(ptr)
     public void Awake()
     {
         Instance = this;
-        if (!gameObject)
-        {
-            Melon<Core>.Logger.Error("GameObject is null.");
-            return;
-        }
+
         var storageMenuObject = GameObject.Find("StorageMenu");
         if (storageMenuObject)
         {
             _storageMenu = storageMenuObject.GetComponent<StorageMenu>();
             _storageMenu.onClosed.AddListener((UnityAction)OnStorageMenuClosed);
         }
+
+        //PlayerInventory.Instance.onPreItemEquipped.AddListener((UnityAction)OnPreItemEquipped);
     }
+
+    private void Start()
+    {
+        BackpackTypes.InitBackpacks();
+        shopManager = new ShopManager();
+    }
+
+    /*private void OnPreItemEquipped()
+    {
+        Melon<Core>.Logger.Msg("Item pre-equipped");
+        var hotbarSlot = PlayerInventory.Instance?.equippedSlot;
+        if (hotbarSlot?.ItemInstance != null)
+        {
+            Melon<Core>.Logger.Msg($"Item pre-equipped: {hotbarSlot.ItemInstance.Name}");
+        }
+    }*/
+
 
     private void OnStorageMenuClosed()
     {
         if (Player.Local == null || !Player.Local.IsOwner || BackpackTypes.Backpacks?.Count == 0) return;
-        RefreshBackpack();
+
+        var wasBackpackStorage = _storageMenu.TitleLabel.text.IndexOf("Backpack") != -1;
+        if ((PlayerInventory.Instance.equippedSlot == null ||
+            PlayerInventory.Instance.equippedSlot?.ItemInstance == null ||
+            PlayerInventory.Instance.equippedSlot?.ItemInstance?.Name.IndexOf("Backpack") == -1) && !wasBackpackStorage)
+        {
+            RefreshBackpack();
+            return;
+        }
     }
 
     public void Open()
@@ -63,6 +86,7 @@ public class Backpack(IntPtr ptr) : MonoBehaviour(ptr)
     {
         CurrentBackpack = backpack;
         _enabled = true;
+        _isOpened = false;
     }
 
     public void SetBackpackEnabled(bool enabled)

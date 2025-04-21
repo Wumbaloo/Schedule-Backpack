@@ -117,7 +117,6 @@ internal static class PlayerPatch
             var backpack = BackpackTypes.Backpacks.FirstOrDefault(b => b.Name == item.ItemInstance.Name);
             if (backpack != null)
             {
-                Melon<Core>.Logger.Msg($"Loaded backpack: {backpack.Name}");
                 Backpack.Instance.EquipBackpack(backpack);
                 break;
             }
