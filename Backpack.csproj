@@ -4,14 +4,12 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>disable</Nullable>
 		<RootNamespace>Backpack</RootNamespace>
-		<LangVersion>default</LangVersion>
+		<LangVersion>latest</LangVersion>
 		<IsPackable>false</IsPackable>
-		<AssemblyVersion>1.0.0.0</AssemblyVersion>
-		<FileVersion>1.0.0.0</FileVersion>
+		<AssemblyVersion>1.2.0.0</AssemblyVersion>
+		<FileVersion>1.2.0.0</FileVersion>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<AssemblyName>Backpack</AssemblyName>
-		<LangVersion>latest</LangVersion>
-		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
 	<ItemGroup>
 	  <None Remove="Assets\big.png" />
@@ -25,6 +23,9 @@
 		</Reference>
 		<Reference Include="Assembly-CSharp">
 			<HintPath>G:\SteamLibrary\steamapps\common\Schedule I\MelonLoader\Il2CppAssemblies\Assembly-CSharp.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppScheduleOne.Core">
+			<HintPath>G:\SteamLibrary\steamapps\common\Schedule I\MelonLoader\Il2CppAssemblies\Il2CppScheduleOne.Core.dll</HintPath>
 		</Reference>
 		<Reference Include="Il2CppAeLa.EasyFeedback">
 			<HintPath>G:\SteamLibrary\steamapps\common\Schedule I\MelonLoader\Il2CppAssemblies\Il2CppAeLa.EasyFeedback.dll</HintPath>

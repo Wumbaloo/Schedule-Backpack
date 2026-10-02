@@ -1,12 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "sdt/LCUUrfw=",
+  "dgSpecHash": "OpJucElebYydVoJFwgzUZz8eMCf1fonYUiM9SInOVsGqRelZf4N79HATAAT5USEBvEciHmrruZrAwTYdgRlOKQ==",
   "success": true,
-  "projectFilePath": "E:\\Developpement\\C#\\Mods\\Backpack\\Backpack.csproj",
-  "expectedPackageFiles": [
-    "C:\\Users\\wil-e\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\6.0.36\\microsoft.windowsdesktop.app.ref.6.0.36.nupkg.sha512",
-    "C:\\Users\\wil-e\\.nuget\\packages\\microsoft.netcore.app.ref\\6.0.36\\microsoft.netcore.app.ref.6.0.36.nupkg.sha512",
-    "C:\\Users\\wil-e\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\6.0.36\\microsoft.aspnetcore.app.ref.6.0.36.nupkg.sha512"
-  ],
+  "projectFilePath": "C:\\Users\\Willy\\orca\\workspaces\\Backpack\\finback\\Backpack.csproj",
+  "expectedPackageFiles": [],
   "logs": []
 }

@@ -13,113 +13,188 @@ internal static class PlayerPatch
     [HarmonyPrefix]
     public static void Awake(Player __instance)
     {
-        if (__instance.LocalExtraFiles.Contains("Backpack"))
-            return;
-        __instance.LocalExtraFiles.Add("Backpack");
+        try
+        {
+            if (__instance.LocalExtraFiles.Contains("Backpack"))
+                return;
+            __instance.LocalExtraFiles.Add("Backpack");
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.Awake: {ex}");
+        }
     }
 
     [HarmonyPatch("WriteData")]
     [HarmonyPostfix]
-    [HarmonyWrapSafe]
     public static void WriteData(Player __instance, string parentFolderPath)
     {
-        var backpackStorage = Save.GetBackpackSave();
-        __instance.Cast<ISaveable>().WriteSubfile(parentFolderPath, "Backpack", backpackStorage);
+        try
+        {
+            var backpackID = Save.GetBackpackSave();
+            __instance.Cast<ISaveable>().WriteSubfile(parentFolderPath, "Backpack", backpackID);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error while saving backpack data: {ex}");
+        }
     }
 
     [HarmonyPatch("Load", typeof(PlayerData), typeof(string))]
     [HarmonyPostfix]
-    [HarmonyWrapSafe]
     public static void Load(Player __instance, PlayerData data, string containerPath)
     {
-        if (!__instance.Loader.TryLoadFile(containerPath, "Backpack", out var contentsString))
-            return;
-
         try
         {
-            Save.LoadBackpack(contentsString);
+            if (!__instance.Loader.TryLoadFile(containerPath, "Backpack", out var backpackID))
+                return;
+
+            Save.LoadBackpack(backpackID);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Melon<Core>.Logger.Error($"Error while loading backpack data: {e}");
+            Melon<Core>.Logger.Error($"Error while loading backpack data: {ex}");
         }
     }
 
     [HarmonyPatch("Activate")]
     [HarmonyPrefix]
-    [HarmonyWrapSafe]
     public static void Activate()
     {
-        Backpack.Instance.SetBackpackEnabled(true);
+        try
+        {
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(true);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.Activate: {ex}");
+        }
     }
 
     [HarmonyPatch("Deactivate")]
     [HarmonyPrefix]
-    [HarmonyWrapSafe]
     public static void Deactivate()
     {
-        Backpack.Instance.SetBackpackEnabled(false);
+        try
+        {
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(false);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.Deactivate: {ex}");
+        }
     }
 
     [HarmonyPatch("ExitAll")]
     [HarmonyPrefix]
-    [HarmonyWrapSafe]
     public static void ExitAll()
     {
-        Backpack.Instance.SetBackpackEnabled(false);
+        try
+        {
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(false);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.ExitAll: {ex}");
+        }
     }
 
     [HarmonyPatch("PassOutRecovery")]
     [HarmonyPrefix]
-    [HarmonyWrapSafe]
     public static void PassOutRecovery()
     {
-        Backpack.Instance.SetBackpackEnabled(true);
+        try
+        {
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(true);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.PassOutRecovery: {ex}");
+        }
     }
 
     [HarmonyPatch("PassOut")]
     [HarmonyPrefix]
-    [HarmonyWrapSafe]
     public static void PassOut()
     {
-        Backpack.Instance.SetBackpackEnabled(false);
+        try
+        {
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(false);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.PassOut: {ex}");
+        }
     }
 
     [HarmonyPatch("OnRevived")]
     [HarmonyPrefix]
-    [HarmonyWrapSafe]
     public static void OnRevived()
     {
-        Backpack.Instance.SetBackpackEnabled(true);
+        try
+        {
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(true);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.OnRevived: {ex}");
+        }
     }
 
     [HarmonyPatch("OnDied")]
     [HarmonyPrefix]
-    [HarmonyWrapSafe]
     public static void OnDied(Player __instance)
     {
-        if (!__instance.Owner.IsLocalClient)
-            return;
+        try
+        {
+            if (!__instance.Owner.IsLocalClient)
+                return;
 
-        Backpack.Instance.SetBackpackEnabled(false);
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(false);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.OnDied: {ex}");
+        }
     }
 
     [HarmonyPatch("LoadInventory")]
     [HarmonyPostfix]
-    [HarmonyWrapSafe]
     public static void LoadInventory(Player __instance)
     {
-        if (!__instance.Owner.IsLocalClient) return;
-
-        foreach (var item in __instance.Inventory)
+        try
         {
-            if (item == null) continue;
-            var backpack = BackpackTypes.Backpacks.FirstOrDefault(b => b.Name == item.ItemInstance.Name);
-            if (backpack != null)
+            if (!__instance.Owner.IsLocalClient)
+                return;
+
+            // Search for backpacks in player inventory using the new API
+            var inventorySlots = PlayerInventory.Instance?.GetAllInventorySlots();
+            if (inventorySlots == null || inventorySlots.Count == 0)
+                return;
+
+            foreach (var slot in inventorySlots)
             {
-                Backpack.Instance.EquipBackpack(backpack);
-                break;
+                if (slot?.ItemInstance == null)
+                    continue;
+
+                var backpack = BackpackTypes.Backpacks.FirstOrDefault(b => b.ItemInstance?.Definition == slot.ItemInstance.Definition);
+                if (backpack != null)
+                {
+                    Backpack.Instance.EquipBackpack(backpack);
+                    break;
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.LoadInventory: {ex}");
         }
     }
 }
