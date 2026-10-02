@@ -6,46 +6,45 @@ namespace BackpackMod;
 
 public class Save
 {
+    /// <summary>
+    /// Saves the currently equipped backpack ID.
+    /// Note: Item contents are stored in ItemSlot data, not here.
+    /// </summary>
     public static string GetBackpackSave()
     {
-        if (Backpack.Instance.CurrentBackpack == null) return string.Empty;
-        return Backpack.Instance.CurrentBackpack.Name;
+        if (Backpack.Instance?.CurrentBackpack == null)
+            return string.Empty;
+        return Backpack.Instance.CurrentBackpack.ID;
     }
 
-    public static void LoadBackpack(string contentsString)
+    /// <summary>
+    /// Restores the equipped backpack from save. The actual inventory contents
+    /// are restored by the game's inventory system.
+    /// </summary>
+    public static void LoadBackpack(string backpackID)
     {
         try
         {
-            if (string.IsNullOrEmpty(contentsString) || contentsString == "{}") return;
-
-            if (!Player.Local.IsOwner)
+            if (string.IsNullOrEmpty(backpackID))
                 return;
 
-            var backpack = BackpackTypes.Backpacks.FirstOrDefault(b => b.Name == contentsString);
+            if (Player.Local == null || !Player.Local.IsOwner)
+                return;
+
+            var backpack = BackpackTypes.Backpacks.FirstOrDefault(b => b.ID == backpackID);
             if (backpack == null)
             {
-                Melon<Core>.Logger.Error($"Backpack \"{contentsString}\" not found.");
+                Melon<Core>.Logger.Msg($"Saved backpack ID \"{backpackID}\" not found. It may have been removed.");
                 return;
             }
-            Backpack.Instance.CurrentBackpack = backpack;
-            var slot = new ItemSlot
-            {
-                ItemInstance = Backpack.Instance.CurrentBackpack.ItemInstance,
-            };
 
-            var firstEmptyIndex = Player.Local.Inventory.Select((x, i) => new { x, i })
-                .FirstOrDefault(x => x.x == null || x.x.ItemInstance == null)?.i ?? -1;
-            if (firstEmptyIndex != -1)
-            {
-                Player.Local.Inventory[firstEmptyIndex] = slot;
-            } else
-            {
-                Melon<Core>.Logger.Error("No empty slot found in inventory.");
-            }
+            // Set the current backpack (don't add to inventory, the game handles that)
+            Backpack.Instance.EquipBackpack(backpack);
+            Melon<Core>.Logger.Msg($"Loaded backpack: {backpack.Name}");
         }
         catch (Exception ex)
         {
-            Melon<Core>.Logger.Error("Error while loading backpack: " + ex);
+            Melon<Core>.Logger.Error($"Error while loading backpack: {ex}");
         }
     }
 }
