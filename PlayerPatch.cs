@@ -57,113 +57,12 @@ internal static class PlayerPatch
         }
     }
 
-    [HarmonyPatch("Activate")]
-    [HarmonyPrefix]
-    public static void Activate()
-    {
-        try
-        {
-            if (Backpack.Instance != null)
-                Backpack.Instance.SetBackpackEnabled(true);
-        }
-        catch (Exception ex)
-        {
-            Melon<Core>.Logger.Error($"Error in PlayerPatch.Activate: {ex}");
-        }
-    }
-
-    [HarmonyPatch("Deactivate")]
-    [HarmonyPrefix]
-    public static void Deactivate()
-    {
-        try
-        {
-            if (Backpack.Instance != null)
-                Backpack.Instance.SetBackpackEnabled(false);
-        }
-        catch (Exception ex)
-        {
-            Melon<Core>.Logger.Error($"Error in PlayerPatch.Deactivate: {ex}");
-        }
-    }
-
-    [HarmonyPatch("ExitAll")]
-    [HarmonyPrefix]
-    public static void ExitAll()
-    {
-        try
-        {
-            if (Backpack.Instance != null)
-                Backpack.Instance.SetBackpackEnabled(false);
-        }
-        catch (Exception ex)
-        {
-            Melon<Core>.Logger.Error($"Error in PlayerPatch.ExitAll: {ex}");
-        }
-    }
-
-    [HarmonyPatch("PassOutRecovery")]
-    [HarmonyPrefix]
-    public static void PassOutRecovery()
-    {
-        try
-        {
-            if (Backpack.Instance != null)
-                Backpack.Instance.SetBackpackEnabled(true);
-        }
-        catch (Exception ex)
-        {
-            Melon<Core>.Logger.Error($"Error in PlayerPatch.PassOutRecovery: {ex}");
-        }
-    }
-
-    [HarmonyPatch("PassOut")]
-    [HarmonyPrefix]
-    public static void PassOut()
-    {
-        try
-        {
-            if (Backpack.Instance != null)
-                Backpack.Instance.SetBackpackEnabled(false);
-        }
-        catch (Exception ex)
-        {
-            Melon<Core>.Logger.Error($"Error in PlayerPatch.PassOut: {ex}");
-        }
-    }
-
-    [HarmonyPatch("OnRevived")]
-    [HarmonyPrefix]
-    public static void OnRevived()
-    {
-        try
-        {
-            if (Backpack.Instance != null)
-                Backpack.Instance.SetBackpackEnabled(true);
-        }
-        catch (Exception ex)
-        {
-            Melon<Core>.Logger.Error($"Error in PlayerPatch.OnRevived: {ex}");
-        }
-    }
-
-    [HarmonyPatch("OnDied")]
-    [HarmonyPrefix]
-    public static void OnDied(Player __instance)
-    {
-        try
-        {
-            if (!__instance.Owner.IsLocalClient)
-                return;
-
-            if (Backpack.Instance != null)
-                Backpack.Instance.SetBackpackEnabled(false);
-        }
-        catch (Exception ex)
-        {
-            Melon<Core>.Logger.Error($"Error in PlayerPatch.OnDied: {ex}");
-        }
-    }
+    /// <summary>
+    /// TODO: These patches need to be updated to match the actual methods in Schedule I 0.4.6f13
+    /// Temporary disabled until we identify the correct method names.
+    /// The methods Activate, Deactivate, ExitAll, PassOut, PassOutRecovery, OnRevived, OnDied
+    /// either don't exist or have different names in the current version.
+    /// </summary>
 
     [HarmonyPatch("LoadInventory")]
     [HarmonyPostfix]
