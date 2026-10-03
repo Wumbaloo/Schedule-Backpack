@@ -12,7 +12,6 @@ public class Backpack : MonoBehaviour
     public Backpack(IntPtr ptr) : base(ptr) { }
 
     private const KeyCode ToggleKey = KeyCode.B;
-    private static bool _initialized = false;
 
     public static Backpack Instance { get; private set; }
 
@@ -29,42 +28,26 @@ public class Backpack : MonoBehaviour
 
     private void Start()
     {
-        // Only initialize backpacks once, even if multiple players spawn
-        if (!_initialized)
+        try
         {
-            try
-            {
-                BackpackTypes.InitBackpacks();
-                shopManager = new ShopManager();
-                _initialized = true;
-                Melon<Core>.Logger.Msg("Backpack mod initialized successfully.");
-            }
-            catch (Exception ex)
-            {
-                Melon<Core>.Logger.Error($"Failed to initialize backpack mod: {ex}");
-            }
+            // Idempotent: creates/registers backpacks if needed and (re)builds the shop listings once per session
+            BackpackTypes.InitBackpacks();
+            shopManager = new ShopManager();
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Failed to initialize backpack mod: {ex}");
         }
     }
 
     public void Open()
     {
-        if (!_enabled || CurrentBackpack?.StorageEntity == null)
+        if (!_enabled || CurrentBackpack?.StorageEntity == null || StorageMenu.Instance == null)
             return;
 
-        if (!CurrentBackpack.StorageEntity.CanBeOpened())
-        {
-            Melon<Core>.Logger.Msg($"Backpack '{CurrentBackpack.Name}' cannot be opened.");
-            return;
-        }
-
+        // Open through the menu directly: StorageEntity.Open() relies on networking
         _isOpened = true;
-        CurrentBackpack.StorageEntity.Open();
-
-        // Subscribe to close event using Action delegate
-        if (CurrentBackpack.StorageEntity.onClosed != null)
-            CurrentBackpack.StorageEntity.onClosed += (Il2CppSystem.Action)(() => OnBackpackClosed());
-        else
-            CurrentBackpack.StorageEntity.onClosed = (Il2CppSystem.Action)(() => OnBackpackClosed());
+        StorageMenu.Instance.Open(CurrentBackpack.StorageEntity, (Il2CppSystem.Action)(() => OnBackpackClosed()));
     }
 
     public void Close()
@@ -79,7 +62,6 @@ public class Backpack : MonoBehaviour
     private void OnBackpackClosed()
     {
         _isOpened = false;
-        RefreshBackpack();
     }
 
     public void EquipBackpack(BackpackTypes.Backpack backpack)
@@ -141,6 +123,37 @@ public class Backpack : MonoBehaviour
         return null;
     }
 
+    /// <summary>
+    /// Picks the backpack B should open: the only owned one, otherwise the last
+    /// selected one if still in the inventory, otherwise the first owned one.
+    /// </summary>
+    private void SelectBackpackToOpen()
+    {
+        var owned = new List<BackpackTypes.Backpack>();
+        var inventorySlots = PlayerInventory.Instance?.GetAllInventorySlots();
+        if (inventorySlots != null)
+        {
+            foreach (var slot in inventorySlots)
+            {
+                var id = slot?.ItemInstance?.Definition?.ID;
+                if (string.IsNullOrEmpty(id))
+                    continue;
+                var backpack = BackpackTypes.Backpacks.FirstOrDefault(b => b.ID == id);
+                if (backpack != null && !owned.Contains(backpack))
+                    owned.Add(backpack);
+            }
+        }
+
+        if (owned.Count == 0)
+        {
+            CurrentBackpack = null;
+            return;
+        }
+
+        if (owned.Count == 1 || CurrentBackpack == null || !owned.Contains(CurrentBackpack))
+            EquipBackpack(owned[0]);
+    }
+
     public void Update()
     {
         // Only process in Main scene
@@ -158,9 +171,13 @@ public class Backpack : MonoBehaviour
                 return;
 
             if (_isOpened)
+            {
                 Close();
-            else
-                Open();
+                return;
+            }
+
+            SelectBackpackToOpen();
+            Open();
         }
         catch (Exception ex)
         {

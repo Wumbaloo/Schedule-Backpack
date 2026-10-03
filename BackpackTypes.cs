@@ -71,6 +71,7 @@ public static class BackpackTypes
             for (int i = 0; i < Rows * Columns; i++)
             {
                 var slot = new ItemSlot();
+                // No SlotOwner on purpose: an owner would route every change through networked RPCs
                 slots.Add(slot);
             }
             entity.ItemSlots = slots;
@@ -92,35 +93,66 @@ public static class BackpackTypes
         {
             try
             {
-                // Create GameObject for the Equippable component
-                var go = new GameObject($"BackpackEquippable_{backpack.ID}");
-                GameObject.DontDestroyOnLoad(go);
-                var equippable = go.AddComponent<BackpackEquippable>();
+                if (backpack.ItemDefinition == null)
+                    CreateDefinition(backpack);
 
-                // Create ItemDefinition from the backpack template
-                backpack.ItemDefinition = ScriptableObject.CreateInstance<StorableItemDefinition>();
-                backpack.ItemDefinition.name = backpack.Name;
-                backpack.ItemDefinition.BasePurchasePrice = backpack.Price;
-                backpack.ItemDefinition.Equippable = equippable;
-                backpack.ItemDefinition.hideFlags = HideFlags.DontUnloadUnusedAsset;
-
-                // Create default ItemInstance
-                backpack.ItemInstance = backpack.ItemDefinition.GetDefaultInstance(1);
-                equippable.itemInstance = backpack.ItemInstance;
-                equippable.backpackID = backpack.ID;
-
-                // Create storage entity
-                backpack.CreateStorageEntity();
-
-                // Add to game registry
-                Registry.Instance.AddToRegistry(backpack.ItemDefinition);
-
-                Melon<Core>.Logger.Msg($"Initialized backpack '{backpack.Name}' (ID: {backpack.ID})");
+                // (Re-)register: the game drops runtime items when returning to the menu
+                if (Registry.Instance != null && !Registry.ItemExists(backpack.ID))
+                {
+                    Registry.Instance.AddToRegistry(backpack.ItemDefinition);
+                    Melon<Core>.Logger.Msg($"Registered backpack '{backpack.Name}' (ID: {backpack.ID})");
+                }
             }
             catch (Exception ex)
             {
                 Melon<Core>.Logger.Error($"Failed to initialize backpack '{backpack.Name}': {ex}");
             }
+        }
+    }
+
+    private static void CreateDefinition(Backpack backpack)
+    {
+        // Create GameObject for the Equippable component
+        var go = new GameObject($"BackpackEquippable_{backpack.ID}");
+        GameObject.DontDestroyOnLoad(go);
+        var equippable = go.AddComponent<BackpackEquippable>();
+
+        // Create ItemDefinition from the backpack template
+        var def = ScriptableObject.CreateInstance<StorableItemDefinition>();
+        def.name = backpack.Name;
+        // ID/Name/Icon are required by the registry, shop and inventory UI
+        def.ID = backpack.ID;
+        def.Name = backpack.Name;
+        def.Description = backpack.Description;
+        def.Icon = backpack.Icon;
+        def.Category = Il2CppScheduleOne.Core.Items.Framework.EItemCategory.Storage;
+        def.legalStatus = Il2CppScheduleOne.Core.Items.Framework.ELegalStatus.Legal;
+        def.StackLimit = 1;
+        def.ShopCategories = new Il2CppSystem.Collections.Generic.List<ShopListing.CategoryInstance>();
+        def.BasePurchasePrice = backpack.Price;
+        def.Equippable = equippable;
+        def.hideFlags = HideFlags.DontUnloadUnusedAsset;
+        backpack.ItemDefinition = def;
+
+        // Create default ItemInstance
+        backpack.ItemInstance = def.GetDefaultInstance(1);
+        equippable.itemInstance = backpack.ItemInstance;
+        equippable.backpackID = backpack.ID;
+
+        backpack.CreateStorageEntity();
+        Melon<Core>.Logger.Msg($"Created backpack '{backpack.Name}' (ID: {backpack.ID})");
+    }
+
+    /// <summary>Empties every backpack (used before loading a save).</summary>
+    public static void ClearAllContents()
+    {
+        foreach (var backpack in Backpacks)
+        {
+            var slots = backpack.StorageEntity?.ItemSlots;
+            if (slots == null)
+                continue;
+            for (int i = 0; i < slots.Count; i++)
+                slots[i]?.ClearStoredInstance(true);
         }
     }
 
