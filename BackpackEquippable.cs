@@ -17,25 +17,30 @@ public class BackpackEquippable : Equippable
 
     public override void Equip(ItemInstance item)
     {
-        if (string.IsNullOrEmpty(backpackID))
+        // The game instantiates a clone of this equippable, so managed fields are lost: resolve via the item.
+        var id = item?.Definition?.ID;
+        if (string.IsNullOrEmpty(id))
+            id = backpackID;
+        if (string.IsNullOrEmpty(id))
         {
-            Melon<Core>.Logger.Error("BackpackEquippable has no backpackID set!");
+            Melon<Core>.Logger.Error("BackpackEquippable could not determine the backpack ID!");
             return;
         }
 
-        var backpack = BackpackTypes.Backpacks.FirstOrDefault(b => b.ID == backpackID);
+        var backpack = BackpackTypes.Backpacks.FirstOrDefault(b => b.ID == id);
         if (backpack != null)
         {
             Backpack.Instance.EquipBackpack(backpack);
         }
         else
         {
-            Melon<Core>.Logger.Error($"Backpack with ID '{backpackID}' not found!");
+            Melon<Core>.Logger.Error($"Backpack with ID '{id}' not found!");
         }
     }
 
     public override void Unequip()
     {
-        Backpack.Instance.SetBackpackEnabled(false);
+        // Keep the backpack selected so B still works after switching hotbar slots
+        Backpack.Instance.Close();
     }
 }

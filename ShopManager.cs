@@ -9,6 +9,8 @@ public class ShopManager
 {
     private static bool _shopInitialized = false;
 
+    public static void Reset() => _shopInitialized = false;
+
     public ShopManager()
     {
         // Only initialize shop once to avoid duplicate listings

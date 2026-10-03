@@ -1,46 +1,90 @@
-﻿using Il2CppScheduleOne.ItemFramework;
-using MelonLoader;
+using System.Text.Json;
+using Il2CppScheduleOne.Persistence.Datas;
 using Il2CppScheduleOne.PlayerScripts;
+using MelonLoader;
 
 namespace BackpackMod;
 
 public class Save
 {
-    /// <summary>
-    /// Saves the currently equipped backpack ID.
-    /// Note: Item contents are stored in ItemSlot data, not here.
-    /// </summary>
-    public static string GetBackpackSave()
+    private class SaveModel
     {
-        if (Backpack.Instance?.CurrentBackpack == null)
-            return string.Empty;
-        return Backpack.Instance.CurrentBackpack.ID;
+        public string Current { get; set; } = string.Empty;
+        public Dictionary<string, string> Contents { get; set; } = new();
     }
 
     /// <summary>
-    /// Restores the equipped backpack from save. The actual inventory contents
-    /// are restored by the game's inventory system.
+    /// Serializes the equipped backpack ID and the contents of every backpack.
+    /// The backpack items themselves are saved by the game (inventory / storages).
     /// </summary>
-    public static void LoadBackpack(string backpackID)
+    public static string GetBackpackSave()
+    {
+        var model = new SaveModel { Current = Backpack.Instance?.CurrentBackpack?.ID ?? string.Empty };
+        foreach (var backpack in BackpackTypes.Backpacks)
+        {
+            var slots = backpack.StorageEntity?.ItemSlots;
+            if (slots == null)
+                continue;
+            try
+            {
+                model.Contents[backpack.ID] = new ItemSet(slots).GetJSON();
+            }
+            catch (Exception ex)
+            {
+                Melon<Core>.Logger.Error($"Error while saving contents of '{backpack.Name}': {ex}");
+            }
+        }
+        return JsonSerializer.Serialize(model);
+    }
+
+    /// <summary>
+    /// Restores backpack contents and the equipped backpack from save.
+    /// </summary>
+    public static void LoadBackpack(string saved)
     {
         try
         {
-            if (string.IsNullOrEmpty(backpackID))
+            if (string.IsNullOrWhiteSpace(saved))
                 return;
 
-            if (Player.Local == null || !Player.Local.IsOwner)
-                return;
+            BackpackTypes.InitBackpacks();
 
-            var backpack = BackpackTypes.Backpacks.FirstOrDefault(b => b.ID == backpackID);
-            if (backpack == null)
+            SaveModel model = null;
+            try
             {
-                Melon<Core>.Logger.Msg($"Saved backpack ID \"{backpackID}\" not found. It may have been removed.");
-                return;
+                model = JsonSerializer.Deserialize<SaveModel>(saved);
+            }
+            catch (JsonException)
+            {
+                // Legacy save: plain backpack ID / name
             }
 
-            // Set the current backpack (don't add to inventory, the game handles that)
-            Backpack.Instance.EquipBackpack(backpack);
-            Melon<Core>.Logger.Msg($"Loaded backpack: {backpack.Name}");
+            if (model == null)
+            {
+                var sep = saved.LastIndexOf("|||", StringComparison.Ordinal);
+                var legacy = (sep >= 0 ? saved.Substring(sep + 3) : saved).Trim();
+                model = new SaveModel { Current = legacy };
+            }
+
+            BackpackTypes.ClearAllContents();
+            foreach (var pair in model.Contents)
+            {
+                var backpack = BackpackTypes.Backpacks.FirstOrDefault(b => b.ID == pair.Key);
+                var slots = backpack?.StorageEntity?.ItemSlots;
+                if (slots == null)
+                    continue;
+                if (ItemSet.TryDeserialize(pair.Value, out var deserialized))
+                    deserialized.LoadTo(slots);
+                else
+                    Melon<Core>.Logger.Error($"Could not deserialize contents of '{backpack.Name}'.");
+            }
+
+            var current = BackpackTypes.Backpacks.FirstOrDefault(b => b.ID == model.Current || b.Name == model.Current);
+            if (current != null && Backpack.Instance != null)
+            {
+                Backpack.Instance.EquipBackpack(current);
+                Melon<Core>.Logger.Msg($"Loaded backpack: {current.Name}");
+            }
         }
         catch (Exception ex)
         {

@@ -17,6 +17,24 @@ public class Core : MelonMod
         LoggerInstance.Msg("Successfully loaded!");
     }
 
+    public override void OnSceneWasLoaded(int buildIndex, string sceneName)
+    {
+        if (sceneName != "Main")
+            return;
+
+        // New game session: fresh shop UI, empty backpacks, and items registered before the save loads
+        ShopManager.Reset();
+        try
+        {
+            BackpackTypes.InitBackpacks();
+            BackpackTypes.ClearAllContents();
+        }
+        catch (Exception ex)
+        {
+            LoggerInstance.Error($"Error initializing backpacks on scene load: {ex}");
+        }
+    }
+
     private void OnPlayerSpawned(Player player)
     {
         if (player.gameObject == null) return;
