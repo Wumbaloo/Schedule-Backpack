@@ -58,19 +58,164 @@ internal static class PlayerPatch
     }
 
     /// <summary>
-    /// TODO: These patches need to be updated to match the actual methods in Schedule I 0.4.6f13
-    /// Temporary disabled until we identify the correct method names.
-    /// The methods Activate, Deactivate, ExitAll, PassOut, PassOutRecovery, OnRevived, OnDied
-    /// either don't exist or have different names in the current version.
+    /// Called when the local player spawns/loads.
+    /// Enable backpack functionality.
     /// </summary>
+    [HarmonyPatch("OnStartClient")]
+    [HarmonyPostfix]
+    public static void OnStartClient(Player __instance)
+    {
+        try
+        {
+            if (!__instance.IsOwner)
+                return;
 
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(true);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.OnStartClient: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Called when the player stops (despawn/unload).
+    /// Disable backpack functionality.
+    /// </summary>
+    [HarmonyPatch("OnStopClient")]
+    [HarmonyPostfix]
+    public static void OnStopClient(Player __instance)
+    {
+        try
+        {
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(false);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.OnStopClient: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Called when player exits all scenes/areas.
+    /// Disable backpack.
+    /// </summary>
+    [HarmonyPatch("ExitAll")]
+    [HarmonyPrefix]
+    public static void ExitAll()
+    {
+        try
+        {
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(false);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.ExitAll: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Called when player becomes unconscious/falls asleep.
+    /// Disable backpack access.
+    /// </summary>
+    [HarmonyPatch("SleepStart")]
+    [HarmonyPrefix]
+    public static void SleepStart(Player __instance)
+    {
+        try
+        {
+            if (!__instance.IsOwner)
+                return;
+
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(false);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.SleepStart: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Called when player wakes up from unconscious/sleep.
+    /// Re-enable backpack.
+    /// </summary>
+    [HarmonyPatch("SleepEnd")]
+    [HarmonyPrefix]
+    public static void SleepEnd(Player __instance)
+    {
+        try
+        {
+            if (!__instance.IsOwner)
+                return;
+
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(true);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.SleepEnd: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Called when player dies.
+    /// Disable backpack access.
+    /// </summary>
+    [HarmonyPatch("OnDied")]
+    [HarmonyPrefix]
+    public static void OnDied(Player __instance)
+    {
+        try
+        {
+            if (!__instance.IsOwner)
+                return;
+
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(false);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.OnDied: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Called when player is revived.
+    /// Re-enable backpack.
+    /// </summary>
+    [HarmonyPatch("OnRevived")]
+    [HarmonyPrefix]
+    public static void OnRevived(Player __instance)
+    {
+        try
+        {
+            if (!__instance.IsOwner)
+                return;
+
+            if (Backpack.Instance != null)
+                Backpack.Instance.SetBackpackEnabled(true);
+        }
+        catch (Exception ex)
+        {
+            Melon<Core>.Logger.Error($"Error in PlayerPatch.OnRevived: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Called when player inventory is loaded.
+    /// Detect and equip backpack from inventory.
+    /// </summary>
     [HarmonyPatch("LoadInventory")]
     [HarmonyPostfix]
     public static void LoadInventory(Player __instance)
     {
         try
         {
-            if (!__instance.Owner.IsLocalClient)
+            if (!__instance.IsOwner)
                 return;
 
             // Search for backpacks in player inventory using the new API
