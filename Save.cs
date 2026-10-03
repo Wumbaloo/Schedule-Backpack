@@ -11,6 +11,7 @@ public class Save
     {
         public string Current { get; set; } = string.Empty;
         public Dictionary<string, string> Contents { get; set; } = new();
+        public List<string> Purchased { get; set; } = new();
     }
 
     /// <summary>
@@ -34,6 +35,7 @@ public class Save
                 Melon<Core>.Logger.Error($"Error while saving contents of '{backpack.Name}': {ex}");
             }
         }
+        model.Purchased = BackpackTypes.Backpacks.Where(b => b.Purchased).Select(b => b.ID).ToList();
         return JsonSerializer.Serialize(model);
     }
 
@@ -78,6 +80,14 @@ public class Save
                 else
                     Melon<Core>.Logger.Error($"Could not deserialize contents of '{backpack.Name}'.");
             }
+
+            foreach (var id in model.Purchased ?? new List<string>())
+            {
+                var bought = BackpackTypes.Backpacks.FirstOrDefault(b => b.ID == id);
+                if (bought != null)
+                    bought.Purchased = true;
+            }
+            ShopManager.ApplyStock();
 
             var current = BackpackTypes.Backpacks.FirstOrDefault(b => b.ID == model.Current || b.Name == model.Current);
             if (current != null && Backpack.Instance != null)

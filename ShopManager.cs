@@ -9,7 +9,26 @@ public class ShopManager
 {
     private static bool _shopInitialized = false;
 
-    public static void Reset() => _shopInitialized = false;
+    private static readonly Dictionary<string, ShopListing> _listings = new();
+
+    public static void Reset()
+    {
+        _shopInitialized = false;
+        _listings.Clear();
+    }
+
+    /// <summary>Backpacks are limited to one purchase: sold out once bought.</summary>
+    public static void ApplyStock()
+    {
+        foreach (var backpack in BackpackTypes.Backpacks)
+        {
+            if (!_listings.TryGetValue(backpack.ID, out var listing) || listing == null)
+                continue;
+            int stock = backpack.Purchased ? 0 : 1;
+            listing.DefaultStock = stock;
+            listing.CurrentStock = stock;
+        }
+    }
 
     public ShopManager()
     {
@@ -65,6 +84,12 @@ public class ShopManager
                     continue;
                 }
 
+                if (backpack.Purchased)
+                {
+                    listing.DefaultStock = 0;
+                    listing.CurrentStock = 0;
+                }
+                _listings[backpack.ID] = listing;
                 shopInterface.Listings.Add(listing);
                 shopInterface.CreateListingUI(listing);
                 Melon<Core>.Logger.Msg($"Added backpack '{backpack.Name}' to shop.");

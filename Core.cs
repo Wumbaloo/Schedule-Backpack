@@ -23,6 +23,7 @@ public class Core : MelonMod
             return;
 
         // New game session: fresh shop UI, empty backpacks, and items registered before the save loads
+        BackpackMod.Patches.BodySearchPatch.Apply(HarmonyInstance);
         ShopManager.Reset();
         try
         {

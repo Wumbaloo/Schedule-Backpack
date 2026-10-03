@@ -477,6 +477,10 @@
 		<Compile Include="BackpackTypes.cs" />
 		<Compile Include="ShopManager.cs" />
 		<Compile Include="SpriteUtils.cs" />
+		<Compile Include="StoragePatch.cs" />
+		<Compile Include="ItemSlotPatch.cs" />
+		<Compile Include="SeizurePatch.cs" />
+		<Compile Include="BodySearchPatch.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
