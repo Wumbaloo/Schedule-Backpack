@@ -21,6 +21,9 @@ public static class BackpackTypes
         public Sprite Icon;
         public int Price { get; set; } = 100;
 
+        // Backpacks can only be bought once per save
+        public bool Purchased { get; set; }
+
         // Item definition created at runtime
         public StorableItemDefinition ItemDefinition;
         public ItemInstance ItemInstance;
@@ -143,11 +146,12 @@ public static class BackpackTypes
         Melon<Core>.Logger.Msg($"Created backpack '{backpack.Name}' (ID: {backpack.ID})");
     }
 
-    /// <summary>Empties every backpack (used before loading a save).</summary>
+    /// <summary>Empties every backpack and resets purchases (used before loading a save).</summary>
     public static void ClearAllContents()
     {
         foreach (var backpack in Backpacks)
         {
+            backpack.Purchased = false;
             var slots = backpack.StorageEntity?.ItemSlots;
             if (slots == null)
                 continue;
