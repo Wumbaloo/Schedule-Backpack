@@ -481,6 +481,7 @@
 		<Compile Include="ItemSlotPatch.cs" />
 		<Compile Include="SeizurePatch.cs" />
 		<Compile Include="BodySearchPatch.cs" />
+		<Compile Include="ArrestInventoryPatch.cs" />
 	</ItemGroup>
 
 	<ItemGroup>

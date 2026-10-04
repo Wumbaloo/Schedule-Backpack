@@ -40,7 +40,8 @@ public class BackpackEquippable : Equippable
 
     public override void Unequip()
     {
-        // Keep the backpack selected so B still works after switching hotbar slots
-        Backpack.Instance.Close();
+        // Do NOT close the backpack here. Opening a storage menu holsters the held item, which calls
+        // Unequip() while the menu is still being built: closing it at that point leaves an empty window.
+        // The selection is kept so B still works after switching hotbar slots.
     }
 }

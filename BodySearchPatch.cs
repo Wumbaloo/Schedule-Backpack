@@ -15,8 +15,17 @@ namespace BackpackMod.Patches;
 /// </summary>
 internal static class BodySearchPatch
 {
+    // Size/position of the small backpack icon shown in the corner of every backpack slot
+    private static readonly Vector2 BadgeSize = new Vector2(26f, 26f);
+    private static readonly Vector2 BadgeOffset = new Vector2(-3f, -3f);
+
     private static readonly List<ItemSlotUI> _extraSlots = new();
     private static bool _applied;
+
+    // Vanilla position of the search indicator's start/end markers, restored when the screen closes
+    private static Vector3 _origStartPos;
+    private static Vector3 _origEndPos;
+    private static bool _indicatorSaved;
 
     /// <summary>Patched lazily (once the Main scene is loaded) instead of at startup, where hooking this UI class crashed the game.</summary>
     public static void Apply(HarmonyLib.Harmony harmony)
@@ -36,7 +45,6 @@ internal static class BodySearchPatch
                 }
                 harmony.Patch(target, postfix: new HarmonyMethod(typeof(BodySearchPatch), handler));
             }
-            Melon<Core>.Logger.Msg("Body search patch applied.");
         }
         catch (Exception ex)
         {
@@ -71,7 +79,37 @@ internal static class BodySearchPatch
 
             var template = slots[0];
             var parent = template.transform.parent;
-            int added = 0;
+            var parentRect = parent.GetComponent<RectTransform>();
+
+            // Reference geometry of the vanilla layout (8 slots): used to keep the indicator's offsets
+            Rebuild(parentRect);
+            int originalCount = slots.Count;
+            float firstX = slots[0].transform.position.x;
+            float lastX = slots[originalCount - 1].transform.position.x;
+            var start = __instance.SearchIndicatorStart;
+            var end = __instance.SearchIndicatorEnd;
+            bool canAlign = start != null && end != null && Math.Abs(lastX - firstX) > 1f;
+            float startOffset = 0f, endOffset = 0f;
+            if (canAlign)
+            {
+                startOffset = start.position.x - firstX;
+                endOffset = end.position.x - lastX;
+                _origStartPos = start.position;
+                _origEndPos = end.position;
+                _indicatorSaved = true;
+            }
+
+            // Names of the children the slot prefab really has: anything else on a clone is a leftover
+            // runtime-created item UI (the game's own storage-icon ghost) that must not stay behind our items
+            var keep = new HashSet<string>();
+            var prefab = __instance.ItemSlotPrefab;
+            if (prefab != null)
+            {
+                var prefabTransform = prefab.transform;
+                for (int i = 0; i < prefabTransform.childCount; i++)
+                    keep.Add(prefabTransform.GetChild(i).name);
+            }
+
             foreach (var backpack in BackpackTypes.Backpacks)
             {
                 if (!carried.Contains(backpack.ID))
@@ -82,32 +120,36 @@ internal static class BodySearchPatch
 
                 for (int i = 0; i < backpackSlots.Count; i++)
                 {
-                    var ui = CreateSlotUI(__instance, template, parent, backpackSlots[i]);
+                    var ui = CreateSlotUI(__instance, template, parent, backpackSlots[i], backpack.Icon, keep);
                     slots.Add(ui);
                     _extraSlots.Add(ui);
-                    added++;
                 }
             }
 
-            try
-            {
-                var rt = parent.GetComponent<RectTransform>();
-                var layouts = string.Join(",", parent.GetComponents<Component>().Select(c => c.GetType().Name));
-                var sb = new System.Text.StringBuilder();
-                for (int i = 0; i < slots.Count; i++)
-                {
-                    var r = slots[i].GetComponent<RectTransform>();
-                    sb.Append($"[{i}:{r.anchoredPosition.x:0},{r.anchoredPosition.y:0}|{r.sizeDelta.x:0}x{r.sizeDelta.y:0}] ");
-                }
-                Melon<Core>.Logger.Msg($"Body search layout: parent '{parent.name}' ({rt.rect.width:0}x{rt.rect.height:0}) components={layouts}; slots {sb}");
-            }
-            catch (Exception ex)
-            {
-                Melon<Core>.Logger.Error($"Body search layout diagnostics failed: {ex.Message}");
-            }
+            if (_extraSlots.Count == 0)
+                return;
 
-            var triggerOnTemplate = template.GetComponent<EventTrigger>() != null;
-            Melon<Core>.Logger.Msg($"Body search: {added} backpack slot(s) added to {slots.Count - added} existing (template has EventTrigger: {triggerOnTemplate}).");
+            // The search indicator was laid out for the vanilla slots only: move its start/end markers
+            // onto the first/last slot of the extended row, keeping the vanilla offsets
+            Rebuild(parentRect);
+            if (canAlign)
+            {
+                float newFirstX = slots[0].transform.position.x;
+                float newLastX = slots[slots.Count - 1].transform.position.x;
+                var sp = start.position;
+                var ep = end.position;
+                start.position = new Vector3(newFirstX + startOffset, sp.y, sp.z);
+                end.position = new Vector3(newLastX + endOffset, ep.y, ep.z);
+                Melon<Core>.Logger.Msg(
+                    $"Body search: {_extraSlots.Count} backpack slot(s) added to {originalCount}; " +
+                    $"indicator start {sp.x:F0}->{start.position.x:F0}, end {ep.x:F0}->{end.position.x:F0}.");
+            }
+            else
+            {
+                Melon<Core>.Logger.Msg(
+                    $"Body search: {_extraSlots.Count} backpack slot(s) added to {originalCount}; " +
+                    "indicator not aligned (could not read the vanilla layout).");
+            }
         }
         catch (Exception ex)
         {
@@ -115,11 +157,34 @@ internal static class BodySearchPatch
         }
     }
 
-    private static ItemSlotUI CreateSlotUI(BodySearchScreen screen, ItemSlotUI template, Transform parent, ItemSlot slot)
+    private static void Rebuild(RectTransform rect)
+    {
+        if (rect != null)
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+    }
+
+    private static ItemSlotUI CreateSlotUI(BodySearchScreen screen, ItemSlotUI template, Transform parent, ItemSlot slot,
+        Sprite backpackIcon, HashSet<string> keep)
     {
         var go = UnityEngine.Object.Instantiate(template.gameObject, parent);
         go.name = "BackpackSearchSlot";
         go.SetActive(true);
+
+        // The template's item UI is created at runtime, so the clone carries a stray copy of it
+        // (shown as a ghost icon behind the real item): remove it before assigning our slot
+        if (keep.Count > 0)
+        {
+            var t = go.transform;
+            for (int i = t.childCount - 1; i >= 0; i--)
+            {
+                var child = t.GetChild(i);
+                if (keep.Contains(child.name))
+                    continue;
+                child.gameObject.SetActive(false);
+                UnityEngine.Object.Destroy(child.gameObject);
+            }
+        }
+
         var ui = go.GetComponent<ItemSlotUI>();
         ui.AssignSlot(slot);
 
@@ -136,7 +201,31 @@ internal static class BodySearchPatch
         });
         AddEntry(trigger, EventTriggerType.PointerDown, () => screen.SlotHeld(ui));
         AddEntry(trigger, EventTriggerType.PointerUp, () => screen.SlotReleased(ui));
+
+        AddBackpackBadge(go, backpackIcon);
         return ui;
+    }
+
+    /// <summary>Small backpack icon in the top-right corner, so backpack slots are told apart from the hotbar.</summary>
+    private static void AddBackpackBadge(GameObject slotGo, Sprite icon)
+    {
+        if (icon == null)
+            return;
+
+        var badge = new GameObject("BackpackBadge");
+        badge.transform.SetParent(slotGo.transform, false);
+        var rt = badge.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(1f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(1f, 1f);
+        rt.sizeDelta = BadgeSize;
+        rt.anchoredPosition = BadgeOffset;
+
+        var image = badge.AddComponent<UnityEngine.UI.Image>();
+        image.sprite = icon;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        image.color = new Color(1f, 1f, 1f, 0.95f);
     }
 
     private static void AddEntry(EventTrigger trigger, EventTriggerType type, Action action)
@@ -156,6 +245,18 @@ internal static class BodySearchPatch
             UnityEngine.Object.Destroy(ui.gameObject);
         }
         _extraSlots.Clear();
+
+        // Put the search indicator's markers back where the game placed them
+        if (_indicatorSaved)
+        {
+            var start = screen.SearchIndicatorStart;
+            var end = screen.SearchIndicatorEnd;
+            if (start != null)
+                start.position = _origStartPos;
+            if (end != null)
+                end.position = _origEndPos;
+            _indicatorSaved = false;
+        }
     }
 
     public static void Close(BodySearchScreen __instance)
