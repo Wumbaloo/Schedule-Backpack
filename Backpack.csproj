@@ -482,6 +482,7 @@
 		<Compile Include="SeizurePatch.cs" />
 		<Compile Include="BodySearchPatch.cs" />
 		<Compile Include="ArrestInventoryPatch.cs" />
+		<Compile Include="StorageMenuPatch.cs" />
 	</ItemGroup>
 
 	<ItemGroup>

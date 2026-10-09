@@ -40,22 +40,8 @@ internal static class PlayerPatch
         }
     }
 
-    [HarmonyPatch("Load", typeof(PlayerData), typeof(string))]
-    [HarmonyPostfix]
-    public static void Load(Player __instance, PlayerData data, string containerPath)
-    {
-        try
-        {
-            if (!__instance.Loader.TryLoadFile(containerPath, "Backpack", out var backpackID))
-                return;
-
-            Save.LoadBackpack(backpackID);
-        }
-        catch (Exception ex)
-        {
-            Melon<Core>.Logger.Error($"Error while loading backpack data: {ex}");
-        }
-    }
+    // Player.Load(PlayerData, string) is patched separately (PlayerLoadPatch.cs): a missing overload in another
+    // game version must not make Harmony abort this whole class and skip every patch declared after it.
 
     /// <summary>
     /// Called when the local player spawns/loads.
@@ -89,6 +75,11 @@ internal static class PlayerPatch
     {
         try
         {
+            // Fires for every player object, including remote players leaving a multiplayer session:
+            // only the local player's own despawn must disable the backpack
+            if (!__instance.IsOwner)
+                return;
+
             if (Backpack.Instance != null)
                 Backpack.Instance.SetBackpackEnabled(false);
         }
@@ -104,10 +95,14 @@ internal static class PlayerPatch
     /// </summary>
     [HarmonyPatch("ExitAll")]
     [HarmonyPrefix]
-    public static void ExitAll()
+    public static void ExitAll(Player __instance)
     {
         try
         {
+            // Also runs for remote players in multiplayer: ignore them
+            if (!__instance.IsOwner)
+                return;
+
             if (Backpack.Instance != null)
                 Backpack.Instance.SetBackpackEnabled(false);
         }

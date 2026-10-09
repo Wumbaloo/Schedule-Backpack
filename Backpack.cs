@@ -3,6 +3,7 @@ using MelonLoader;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Il2CppScheduleOne.PlayerScripts;
+using BackpackMod.Patches;
 
 namespace BackpackMod;
 
@@ -47,7 +48,15 @@ public class Backpack : MonoBehaviour
 
         // Open through the menu directly: StorageEntity.Open() relies on networking
         _isOpened = true;
-        StorageMenu.Instance.Open(CurrentBackpack.StorageEntity, (Il2CppSystem.Action)(() => OnBackpackClosed()));
+        StorageMenuPatch.OpeningOwn = true;
+        try
+        {
+            StorageMenu.Instance.Open(CurrentBackpack.StorageEntity, (Il2CppSystem.Action)(() => OnBackpackClosed()));
+        }
+        finally
+        {
+            StorageMenuPatch.OpeningOwn = false;
+        }
     }
 
     public void Close()
@@ -175,6 +184,10 @@ public class Backpack : MonoBehaviour
                 Close();
                 return;
             }
+
+            // Another inventory (dealer, container...) is displayed: opening ours on top of it would break it
+            if (StorageMenuPatch.OpenedByOthers)
+                return;
 
             SelectBackpackToOpen();
             Open();
