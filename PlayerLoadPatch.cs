@@ -25,8 +25,17 @@ internal static class PlayerLoadPatch
 {
     private const string BackpackFileName = "Backpack.json";
 
-    internal static MethodBase FindLoad() =>
-        AccessTools.Method(typeof(Player), "Load", new[] { typeof(PlayerData), typeof(string) });
+    // Searched through GetDeclaredMethods: AccessTools.Method logs a warning for every lookup of a missing method
+    private static readonly Lazy<MethodBase> _load = new(() =>
+        AccessTools.GetDeclaredMethods(typeof(Player)).FirstOrDefault(m =>
+        {
+            if (m.Name != "Load")
+                return false;
+            var p = m.GetParameters();
+            return p.Length == 2 && p[0].ParameterType == typeof(PlayerData) && p[1].ParameterType == typeof(string);
+        }));
+
+    internal static MethodBase FindLoad() => _load.Value;
 
     internal static MethodBase FindPlayerLoaderLoad() =>
         AccessTools.DeclaredMethod(typeof(PlayerLoader), "Load", new[] { typeof(string) });
@@ -117,10 +126,8 @@ internal static class PlayerLoadMainPatch
 {
     private static bool Prepare()
     {
-        if (PlayerLoadPatch.FindLoad() != null)
-            return true;
-        Melon<Core>.Logger.Warning("Player.Load(PlayerData, string) not found in this game version, using the fallback.");
-        return false;
+        // Missing on game 0.4.7+: expected, PlayerLoadFallbackPatch takes over
+        return PlayerLoadPatch.FindLoad() != null;
     }
 
     private static MethodBase TargetMethod() => PlayerLoadPatch.FindLoad();

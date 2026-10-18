@@ -72,7 +72,8 @@ public class Backpack : MonoBehaviour
         _isOpened = false;
     }
 
-    public void EquipBackpack(BackpackTypes.Backpack backpack)
+    // Not public: Il2CppInterop warns about public methods of injected types that take managed-only parameters
+    internal void EquipBackpack(BackpackTypes.Backpack backpack)
     {
         CurrentBackpack = backpack;
         _enabled = true;
