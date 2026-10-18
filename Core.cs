@@ -2,7 +2,7 @@ using Il2CppScheduleOne.PlayerScripts;
 using MelonLoader;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(BackpackMod.Core), "Backpack", "1.2.0", "Wumbaloo", null)]
+[assembly: MelonInfo(typeof(BackpackMod.Core), "Backpack", "1.3.0", "Wumbaloo", null)]
 [assembly: MelonGame("TVGS", "Schedule I")]
 
 namespace BackpackMod;
