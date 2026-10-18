@@ -72,10 +72,10 @@ public class Backpack : MonoBehaviour
         _isOpened = false;
     }
 
-    // Not public: Il2CppInterop warns about public methods of injected types that take managed-only parameters
-    internal void EquipBackpack(BackpackTypes.Backpack backpack)
+    // EquipBackpack(...) lives in BackpackExtensions below: Il2CppInterop warns about any method of an injected
+    // type that takes a managed-only parameter, even a non-public one.
+    internal void ResetState()
     {
-        CurrentBackpack = backpack;
         _enabled = true;
         _isOpened = false;
     }
@@ -160,7 +160,7 @@ public class Backpack : MonoBehaviour
         }
 
         if (owned.Count == 1 || CurrentBackpack == null || !owned.Contains(CurrentBackpack))
-            EquipBackpack(owned[0]);
+            this.EquipBackpack(owned[0]);
     }
 
     public void Update()
@@ -176,7 +176,7 @@ public class Backpack : MonoBehaviour
             Instance = this;
         if (Save.PendingCurrent != null)
         {
-            EquipBackpack(Save.PendingCurrent);
+            this.EquipBackpack(Save.PendingCurrent);
             Save.PendingCurrent = null;
         }
 
@@ -217,5 +217,14 @@ public class Backpack : MonoBehaviour
         {
             Melon<Core>.Logger.Error($"Error while toggling backpack: {ex}");
         }
+    }
+}
+
+internal static class BackpackExtensions
+{
+    internal static void EquipBackpack(this Backpack self, BackpackTypes.Backpack backpack)
+    {
+        self.CurrentBackpack = backpack;
+        self.ResetState();
     }
 }
