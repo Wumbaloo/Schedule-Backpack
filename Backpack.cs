@@ -12,8 +12,6 @@ public class Backpack : MonoBehaviour
 {
     public Backpack(IntPtr ptr) : base(ptr) { }
 
-    private const KeyCode ToggleKey = KeyCode.B;
-
     public static Backpack Instance { get; private set; }
 
     public BackpackTypes.Backpack CurrentBackpack;
@@ -24,7 +22,16 @@ public class Backpack : MonoBehaviour
 
     public void Awake()
     {
-        Instance = this;
+        // One component is added per player (remote ones included): only the local player's one must be
+        // the Instance, it is claimed in Update() once Player.Local is known.
+        if (Instance == null)
+            Instance = this;
+    }
+
+    private bool IsLocalPlayerComponent()
+    {
+        var local = Player.Local;
+        return local != null && local.gameObject == gameObject;
     }
 
     private void Start()
@@ -48,15 +55,7 @@ public class Backpack : MonoBehaviour
 
         // Open through the menu directly: StorageEntity.Open() relies on networking
         _isOpened = true;
-        StorageMenuPatch.OpeningOwn = true;
-        try
-        {
-            StorageMenu.Instance.Open(CurrentBackpack.StorageEntity, (Il2CppSystem.Action)(() => OnBackpackClosed()));
-        }
-        finally
-        {
-            StorageMenuPatch.OpeningOwn = false;
-        }
+        StorageMenu.Instance.Open(CurrentBackpack.StorageEntity, (Il2CppSystem.Action)(() => OnBackpackClosed()));
     }
 
     public void Close()
@@ -166,18 +165,34 @@ public class Backpack : MonoBehaviour
     public void Update()
     {
         // Only process in Main scene
-        if (SceneManager.GetActiveScene().name != "Main" || Instance == null)
+        if (SceneManager.GetActiveScene().name != "Main")
             return;
 
-        // Check if player can toggle backpack (not in UI, text field, etc.)
-        if (!Input.GetKeyDown(ToggleKey))
+        // Remote players have their own Backpack component: only the local player's one reacts to the key
+        if (!IsLocalPlayerComponent())
+            return;
+        if (Instance != this)
+            Instance = this;
+        if (Save.PendingCurrent != null)
+        {
+            EquipBackpack(Save.PendingCurrent);
+            Save.PendingCurrent = null;
+        }
+
+        if (!Input.GetKeyDown(Core.ToggleKey))
             return;
 
         try
         {
             // Skip if player is not ready
-            if (Player.Local == null || !Player.Local.IsOwner)
+            if (!Player.Local.IsOwner)
                 return;
+
+            // The menu's real state is the source of truth: our flag can be stale if the game closed the menu itself
+            var menu = StorageMenu.Instance;
+            var menuOpen = menu != null && menu.IsOpen;
+            if (_isOpened && (!menuOpen || menu.OpenedStorageEntity != CurrentBackpack?.StorageEntity))
+                _isOpened = false;
 
             if (_isOpened)
             {
@@ -186,10 +201,15 @@ public class Backpack : MonoBehaviour
             }
 
             // Another inventory (dealer, container...) is displayed: opening ours on top of it would break it
-            if (StorageMenuPatch.OpenedByOthers)
+            if (menuOpen)
+            {
+                Melon<Core>.Logger.Msg("Backpack key ignored: another storage menu is open.");
                 return;
+            }
 
             SelectBackpackToOpen();
+            if (!_enabled || CurrentBackpack?.StorageEntity == null)
+                Melon<Core>.Logger.Msg($"Backpack key ignored: enabled={_enabled}, backpack={(CurrentBackpack == null ? "none" : CurrentBackpack.Name)}");
             Open();
         }
         catch (Exception ex)

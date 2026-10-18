@@ -14,6 +14,9 @@ public class Save
         public List<string> Purchased { get; set; } = new();
     }
 
+    /// <summary>Equipped backpack read from the save before the local player's component existed.</summary>
+    public static BackpackTypes.Backpack PendingCurrent { get; set; }
+
     /// <summary>
     /// Serializes the equipped backpack ID and the contents of every backpack.
     /// The backpack items themselves are saved by the game (inventory / storages).
@@ -90,11 +93,20 @@ public class Save
             ShopManager.ApplyStock();
 
             var current = BackpackTypes.Backpacks.FirstOrDefault(b => b.ID == model.Current || b.Name == model.Current);
-            if (current != null && Backpack.Instance != null)
+            if (current != null)
             {
-                Backpack.Instance.EquipBackpack(current);
-                Melon<Core>.Logger.Msg($"Loaded backpack: {current.Name}");
+                if (Backpack.Instance != null)
+                {
+                    Backpack.Instance.EquipBackpack(current);
+                    Melon<Core>.Logger.Msg($"Loaded backpack: {current.Name}");
+                }
+                else
+                {
+                    // The player's component does not exist yet: applied by Backpack.Update() once it does
+                    PendingCurrent = current;
+                }
             }
+            Melon<Core>.Logger.Msg($"Backpack save loaded ({model.Contents.Count} backpack contents).");
         }
         catch (Exception ex)
         {
