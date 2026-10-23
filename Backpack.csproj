@@ -6,8 +6,8 @@
 		<RootNamespace>Backpack</RootNamespace>
 		<LangVersion>latest</LangVersion>
 		<IsPackable>false</IsPackable>
-		<AssemblyVersion>1.3.0.0</AssemblyVersion>
-		<FileVersion>1.3.0.0</FileVersion>
+		<AssemblyVersion>1.3.1.0</AssemblyVersion>
+		<FileVersion>1.3.1.0</FileVersion>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<AssemblyName>Backpack</AssemblyName>
 	</PropertyGroup>
