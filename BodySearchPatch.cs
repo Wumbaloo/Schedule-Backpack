@@ -166,13 +166,17 @@ internal static class BodySearchPatch
     private static ItemSlotUI CreateSlotUI(BodySearchScreen screen, ItemSlotUI template, Transform parent, ItemSlot slot,
         Sprite backpackIcon, HashSet<string> keep)
     {
-        var go = UnityEngine.Object.Instantiate(template.gameObject, parent);
+        // Clone the game's pristine slot prefab when possible: cloning a live slot also copies the item it
+        // currently displays (the player's first item then showed up in empty backpack slots)
+        var prefab = screen.ItemSlotPrefab;
+        var usingPrefab = prefab != null;
+        var go = UnityEngine.Object.Instantiate(usingPrefab ? prefab.gameObject : template.gameObject, parent);
         go.name = "BackpackSearchSlot";
         go.SetActive(true);
 
         // The template's item UI is created at runtime, so the clone carries a stray copy of it
         // (shown as a ghost icon behind the real item): remove it before assigning our slot
-        if (keep.Count > 0)
+        if (!usingPrefab && keep.Count > 0)
         {
             var t = go.transform;
             for (int i = t.childCount - 1; i >= 0; i--)
@@ -186,6 +190,19 @@ internal static class BodySearchPatch
         }
 
         var ui = go.GetComponent<ItemSlotUI>();
+
+        // Whatever the clone source, an empty slot must not keep an item display copied from somewhere else
+        if (slot?.ItemInstance == null && ui.ItemContainer != null)
+        {
+            var container = ui.ItemContainer;
+            for (int i = container.childCount - 1; i >= 0; i--)
+            {
+                var child = container.GetChild(i).gameObject;
+                child.SetActive(false);
+                UnityEngine.Object.Destroy(child);
+            }
+        }
+
         ui.AssignSlot(slot);
 
         // Cloned objects don't keep runtime-added listeners: wire the search interactions ourselves
